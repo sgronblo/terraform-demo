@@ -5,5 +5,11 @@ var employees = [
 ]
 
 exports.handler = function(event, context, callback) {
-    callback(null, employees)
+    var response = {
+        isBase64Encoded: false,
+        statusCode: 200,
+        headers: {},
+        body: JSON.stringify(employees)
+    }
+    callback(null, response)
 }
