@@ -1,15 +1,17 @@
-var employees = [
-    {"UserName":{"S":"Sam"},"Role":{"S":"Development"}},
-    {"UserName":{"S":"Ivy"},"Role":{"S":"Design"}},
-    {"UserName":{"S":"Jun"},"Role":{"S":"Business"}},
-]
+var AWS = require('aws-sdk')
 
 exports.handler = function(event, context, callback) {
-    var response = {
-        isBase64Encoded: false,
-        statusCode: 200,
-        headers: {},
-        body: JSON.stringify(employees)
-    }
-    callback(null, response)
+    var dynamodb = new AWS.DynamoDB({ apiVersion: '2012-08-10' })
+    dynamodb.scan({ TableName: process.env.TABLENAME }, (err, data) => {
+        if (err) {
+            return callback(err)
+        }
+        var response = {
+            isBase64Encoded: false,
+            statusCode: 200,
+            headers: {},
+            body: JSON.stringify(data.Items)
+        }
+        return callback(null, response)
+    })
 }

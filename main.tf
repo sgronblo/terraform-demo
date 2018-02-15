@@ -48,6 +48,11 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_write_access" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "cloudwatch_dynamodb_access" {
+  role = "${aws_iam_role.iam_for_lambda.name}"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
+}
+
 resource "aws_api_gateway_account" "api_gw_account" {
   cloudwatch_role_arn = "${aws_iam_role.apigw_cw_role.arn}"
 }
@@ -65,6 +70,11 @@ resource "aws_lambda_function" "employee_listing" {
     handler = "lambda.handler"
     role = "${aws_iam_role.iam_for_lambda.arn}"
     source_code_hash = "${data.archive_file.lambda_zip.output_base64sha256}"
+    environment = {
+      variables = {
+        TABLENAME = "${aws_dynamodb_table.rj_employees.name}"
+      }
+    }
 }
 
 resource "aws_api_gateway_rest_api" "rj_api" {
@@ -112,4 +122,32 @@ resource "aws_lambda_permission" "apigw_lambda" {
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
   source_arn = "arn:aws:execute-api:ap-northeast-1:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.rj_api.id}/*/${aws_api_gateway_method.list_all.http_method}${aws_api_gateway_resource.employees.path}"
+}
+
+resource "aws_dynamodb_table" "rj_employees" {
+  name           = "RJEmployees"
+  read_capacity  = 1
+  write_capacity = 1
+  hash_key       = "UserName"
+  range_key      = "Role"
+
+  attribute {
+    name = "UserName"
+    type = "S"
+  }
+
+  attribute {
+    name = "Role"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled = false
+  }
+
+  tags {
+    Name        = "rj-employees"
+    Environment = "test"
+  }
 }
